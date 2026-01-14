@@ -48,6 +48,13 @@ export enum TranslationDocType {
   Communication = 'Communication'
 }
 
+export enum TranslationDimension {
+  PatientCentric = 'Patient Centric',
+  RegulatoryFocused = 'Regulatory Focused',
+  MedicalAccuracy = 'Medical Accuracy',
+  LegalAspects = 'Legal Aspects'
+}
+
 export type PageRange = '1-10' | '10-50' | '50-100' | '100-500';
 export type PageSize = 'A2' | 'A3' | 'A4';
 
@@ -80,6 +87,8 @@ export interface TranslationLog {
   trackingId: string;
   functionalGroup: FunctionalGroup;
   docType: TranslationDocType;
+  dimension?: TranslationDimension;
+  culturalNuances?: boolean;
   pageRange?: PageRange;
   projectNumber: string;
   timestamp: number;
@@ -98,6 +107,9 @@ export interface TranslationLog {
   workflowTimeCodes: Array<{ event: string; timestamp: number }>;
   estimatedCost?: number;
   rationales?: CorrectionRationale[];
+  backTranslation?: string[];
+  qcReviewerName?: string;
+  certifiedAt?: number;
 }
 
 export interface RegulationEntry {
