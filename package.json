@@ -1,5 +1,5 @@
 {
-  "name": "aide-reggenie_1.0",
+  "name": "aide--clinical-intelligence-jan-2026",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,9 @@
     "react-dom": "^19.2.0",
     "react": "^19.2.0",
     "recharts": "^3.4.1",
-    "firebase": "^12.6.0"
+    "pdfjs-dist": "4.0.379",
+    "mammoth": "1.6.0",
+    "firebase": "^12.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

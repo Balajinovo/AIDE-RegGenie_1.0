@@ -32,60 +32,128 @@ export enum ImpactLevel {
   Unknown = 'Unknown'
 }
 
+export enum FunctionalGroup {
+  ClinicalOperations = 'Clinical Operations',
+  RegulatoryAffairs = 'Regulatory Affairs',
+  QualityAssurance = 'Quality Assurance',
+  Pharmacovigilance = 'Pharmacovigilance',
+  Other = 'Other Functions'
+}
+
+export enum TranslationDocType {
+  EssentialDocuments = 'Essential Documents',
+  RegulatorySubmissions = 'IRB/EC/Regulatory Submissions',
+  PatientFacing = 'Patient Facing Materials',
+  ProtocolTechnical = 'Protocol and Other Technical Documents',
+  Communication = 'Communication'
+}
+
+export type PageRange = '1-10' | '10-50' | '50-100' | '100-500';
+export type PageSize = 'A2' | 'A3' | 'A4';
+
+export enum MQMSeverity {
+  Minor = 'Minor',
+  Major = 'Major',
+  Critical = 'Critical'
+}
+
+export enum MQMType {
+  Terminology = 'Terminology',
+  Accuracy = 'Accuracy',
+  Fluency = 'Fluency',
+  Style = 'Style'
+}
+
+export interface CorrectionRationale {
+  originalText: string;
+  updatedText: string;
+  rationale: string;
+  timestamp: number;
+  pageIndex: number;
+  wordIndex: number;
+  mqmSeverity: MQMSeverity;
+  mqmType: MQMType;
+}
+
+export interface TranslationLog {
+  id: string;
+  trackingId: string;
+  functionalGroup: FunctionalGroup;
+  docType: TranslationDocType;
+  pageRange?: PageRange;
+  projectNumber: string;
+  timestamp: number;
+  sourceLanguage: string;
+  targetLanguage: string;
+  wordCount: number;
+  charCount: number;
+  pageCount: number;
+  mode: string;
+  provider: string;
+  qualityScore?: number; // Calculated MQM Yield (0-100)
+  mqmErrorScore?: number; // Weighted error total
+  status: 'Draft' | 'QC Pending' | 'QC Finalized' | 'Downloaded';
+  humanCorrectionVolume?: number;
+  qcTimeSpentSeconds: number; 
+  workflowTimeCodes: Array<{ event: string; timestamp: number }>;
+  estimatedCost?: number;
+  rationales?: CorrectionRationale[];
+}
+
 export interface RegulationEntry {
   id: string;
+  trackingId: string;
   title: string;
   agency: string;
   region: Region;
-  country: string; // Specific country or jurisdiction
+  country: string; 
   date: string;
   effectiveDate?: string;
   category: Category;
   summary: string;
   impact: ImpactLevel;
   status: 'Draft' | 'Final' | 'Consultation';
-  content: string; // The full text or detailed description
-  url?: string; // Citation URL
-  
-  // New fields for Rationalization and Approval
+  content: string; 
+  url?: string; 
   riskLevel?: string;
   riskRationale?: string;
   adminApproved?: boolean;
+  lastChecked?: number;
+  isNew?: boolean;
 }
+
+export interface MonitoringReportLog {
+  id: string;
+  projectNumber: string;
+  sponsor: string;
+  visitDate: string;
+  visitNumber: string;
+  visitType: string;
+  contentHtml: string;
+  rawNotes: string;
+  audit: {
+    explainability: string;
+    traceability: string;
+    modelAccuracy: number;
+    timestamp: number;
+  };
+}
+
+export type AppTab = 'translation' | 'translation-metrics' | 'monitoring-report' | 'chat' | 'dose-management' | 'agentic-monitoring' | 'competency-dashboard';
 
 export interface AnalysisResult {
   summary: string;
-  operationalImpact: string;
   complianceRisk: string;
-  riskRationale: string; // Rationale for the risk level
-  keyChanges: string[];
-  mitigationStrategies: string[];
+  operationalImpact: string;
   actionItems: string[];
-  riskLevel: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  text: string;
-  timestamp: number;
 }
 
 export interface NewsItem {
   title: string;
+  summary: string;
   date: string;
   source: string;
-  summary: string;
-  content: string; // Detailed content for the read more view
-  url?: string; // Link to the source
-}
-
-export interface DatabaseFilters {
-  status?: string[];
-  impact?: string[];
-  category?: string[];
-  country?: string[];
-  agency?: string[];
+  url: string;
 }
 
 export interface TMFDocument {
@@ -93,5 +161,46 @@ export interface TMFDocument {
   documentName: string;
   description: string;
   mandatory: boolean;
-  localRequirement: string; // Specifics for the country
+  localRequirement?: string;
 }
+
+export interface GapAnalysisResult {
+  complianceScore: number;
+  executiveSummary: string;
+  missingElements: {
+    requirement: string;
+    gap: string;
+    severity: 'High' | 'Medium' | 'Low';
+  }[];
+  remediationPlan: {
+    action: string;
+    priority: 'High' | 'Medium' | 'Low';
+    suggestedText?: string;
+  }[];
+}
+
+export interface DatabaseFilters {
+  status?: string[];
+  impact?: string[];
+  category?: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: number;
+  groundingMetadata?: any;
+}
+
+export interface GenieFeedback {
+  id: string;
+  rating: number;
+  comment: string;
+  timestamp: number;
+  querySnippet?: string;
+  topic?: string;
+  responseSnippet?: string;
+}
+
+export type SubTab = 'gemini' | 'chatgpt' | 'copilot';

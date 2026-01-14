@@ -1,19 +1,5 @@
 {
-  "name": "AIDE-RegGenie_1.0",
-  "description": "A next-generation Regulatory Intelligence Database leveraging the AI to track, analyze, and summarize global healthcare regulations ",
   "requestFramePermissions": [],
-  "params": {
-    "google_api_key": {
-      "type": "string",
-      "description": "Google API Key"
-    },
-    "openai_api_key": {
-      "type": "string",
-      "description": "OpenAI API Key (Optional)"
-    },
-    "firebase_config": {
-      "type": "string",
-      "description": "Firebase Config Object (Optional)"
-    }
-  }
+  "name": "AIDE- Clinical Intelligence Jan 2026",
+  "description": ""
 }

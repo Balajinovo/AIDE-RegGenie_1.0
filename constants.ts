@@ -3,54 +3,86 @@ import { Category, ImpactLevel, Region, RegulationEntry } from './types';
 
 export const REGION_COUNTRY_MAP: Record<string, string[]> = {
   [Region.US]: ['United States', 'Canada', 'Mexico'],
-  [Region.EU]: ['European Union', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Switzerland', 'Belgium', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Ireland', 'Poland'],
-  [Region.APAC]: ['Japan', 'China', 'India', 'Australia', 'Singapore', 'South Korea', 'New Zealand', 'Taiwan', 'Thailand', 'Vietnam', 'Malaysia'],
+  [Region.EU]: ['European Union', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Switzerland', 'Belgium', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Ireland', 'Poland', 'Portugal', 'Greece', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Slovakia', 'Slovenia', 'Estonia', 'Latvia', 'Lithuania'],
+  [Region.APAC]: ['Japan', 'China', 'India', 'Australia', 'Singapore', 'South Korea', 'New Zealand', 'Taiwan', 'Thailand', 'Vietnam', 'Malaysia', 'Indonesia', 'Philippines', 'Hong Kong', 'Pakistan', 'Bangladesh'],
   [Region.UK]: ['United Kingdom'],
-  [Region.Global]: ['Global', 'WHO', 'ICH']
+  [Region.Global]: ['Global', 'WHO', 'ICH', 'Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Venezuela', 'South Africa', 'Egypt', 'Saudi Arabia', 'UAE', 'Turkey', 'Israel', 'Russia', 'Nigeria', 'Kenya']
 };
 
 export const ALL_COUNTRIES = Array.from(new Set(Object.values(REGION_COUNTRY_MAP).flat())).sort();
 
-// Coordinates calibrated for Equirectangular Projection (2:1 Aspect Ratio)
-// Scale: X: 0-100, Y: 0-50
-export const COUNTRY_COORDINATES: Record<string, { x: number; y: number }> = {
-  'United States': { x: 23, y: 14.5 },
-  'Canada': { x: 19, y: 9 },
-  'Mexico': { x: 22, y: 18.5 },
-  'United Kingdom': { x: 49.5, y: 10 },
-  'European Union': { x: 52, y: 11 },
-  'Germany': { x: 52.5, y: 10.8 },
-  'France': { x: 50.5, y: 12.2 },
-  'Italy': { x: 53, y: 13.6 },
-  'Spain': { x: 49, y: 14 },
-  'Netherlands': { x: 51.5, y: 10.5 },
-  'Switzerland': { x: 52, y: 12 },
-  'Belgium': { x: 51, y: 10.8 },
-  'Austria': { x: 53.5, y: 11.8 },
-  'Sweden': { x: 54, y: 7 },
-  'Norway': { x: 52, y: 7 },
-  'Denmark': { x: 52, y: 9 },
-  'Finland': { x: 56, y: 6 },
-  'Ireland': { x: 48.5, y: 10.5 },
-  'Poland': { x: 55, y: 10.5 },
-  'China': { x: 79, y: 15.5 },
-  'India': { x: 72, y: 19 },
-  'Japan': { x: 88, y: 15 },
-  'Australia': { x: 87, y: 37 },
-  'Singapore': { x: 78.8, y: 24.8 },
-  'South Korea': { x: 85, y: 15 },
-  'Taiwan': { x: 83, y: 18 },
-  'Thailand': { x: 78, y: 21 },
-  'Vietnam': { x: 80, y: 21 },
-  'Malaysia': { x: 78, y: 23.5 },
-  'New Zealand': { x: 96, y: 41 },
-  'Brazil': { x: 35, y: 32 },
-  'Global': { x: 45, y: 25 } // Mid-Atlantic
+// Mapping of Country/Region to Regulatory Agency Name and News URL
+export const COUNTRY_AUTHORITY_MAP: Record<string, { agency: string; url: string; acronym: string }> = {
+  // Global & North America
+  'Global': { agency: 'World Health Organization / ICH', acronym: 'WHO/ICH', url: 'https://www.who.int/news' },
+  'United States': { agency: 'Food and Drug Administration', acronym: 'FDA', url: 'https://www.fda.gov/news-events' },
+  'Canada': { agency: 'Health Canada', acronym: 'HC', url: 'https://www.canada.ca/en/health-canada/services/drugs-health-products/medeffect-canada/adverse-reaction-database.html' },
+  'Mexico': { agency: 'COFEPRIS', acronym: 'COFEPRIS', url: 'https://www.gob.mx/cofepris/archivo/prensa' },
+
+  // Europe (Priority)
+  'European Union': { agency: 'European Medicines Agency', acronym: 'EMA', url: 'https://www.ema.europa.eu/en/news' },
+  'United Kingdom': { agency: 'Medicines and Healthcare products Regulatory Agency', acronym: 'MHRA', url: 'https://www.gov.uk/search/news-and-communications?organisations%5B%5D=medicines-and-healthcare-products-regulatory-agency' },
+  'Germany': { agency: 'BfArM / PEI', acronym: 'BfArM', url: 'https://www.bfarm.de/EN/News/_node.html' },
+  'France': { agency: 'Agence Nationale de Sécurité du Médicament', acronym: 'ANSM', url: 'https://ansm.sante.fr/actualites' },
+  'Spain': { agency: 'Agencia Española de Medicamentos y Productos Sanitarios', acronym: 'AEMPS', url: 'https://www.aemps.gob.es/en/informa/notasInformativas/home.htm' },
+  'Italy': { agency: 'Agenzia Italiana del Farmaco', acronym: 'AIFA', url: 'https://www.aifa.gov.it/en/news' },
+  'Czech Republic': { agency: 'State Institute for Drug Control', acronym: 'SÚKL', url: 'https://www.sukl.eu/sukl/sukl-news' },
+  'Poland': { agency: 'Office for Registration of Medicinal Products', acronym: 'URPL', url: 'https://urpl.gov.pl/en/news' },
+  'Switzerland': { agency: 'Swissmedic', acronym: 'Swissmedic', url: 'https://www.swissmedic.ch/swissmedic/en/home/news.html' },
+  'Ireland': { agency: 'Health Products Regulatory Authority', acronym: 'HPRA', url: 'https://www.hpra.ie/homepage/medicines/safety-information' },
+  'Netherlands': { agency: 'Medicines Evaluation Board', acronym: 'CBG-MEB', url: 'https://english.cbg-meb.nl/news' },
+  'Sweden': { agency: 'Swedish Medical Products Agency', acronym: 'Läkemedelsverket', url: 'https://www.lakemedelsverket.se/en/news' },
+  'Norway': { agency: 'Norwegian Medical Products Agency', acronym: 'NOMA', url: 'https://www.dmp.no/en/news/' },
+  'Denmark': { agency: 'Danish Medicines Agency', acronym: 'DKMA', url: 'https://laegemiddelstyrelsen.dk/en/news/' },
+  'Finland': { agency: 'Fimea', acronym: 'Fimea', url: 'https://www.fimea.fi/web/en/news' },
+  'Belgium': { agency: 'Federal Agency for Medicines and Health Products', acronym: 'FAMHP', url: 'https://www.famhp.be/en/news' },
+  'Austria': { agency: 'Austrian Medicines and Medical Devices Agency', acronym: 'BASG', url: 'https://www.basg.gv.at/en/news-center' },
+  'Portugal': { agency: 'INFARMED', acronym: 'INFARMED', url: 'https://www.infarmed.pt/web/infarmed/noticias' },
+  'Greece': { agency: 'National Organization for Medicines', acronym: 'EOF', url: 'https://www.eof.gr/web/guest/news' },
+  'Hungary': { agency: 'National Institute of Pharmacy and Nutrition', acronym: 'OGYÉI', url: 'https://ogyei.gov.hu/news_highlights' },
+  'Romania': { agency: 'National Agency for Medicines and Medical Devices', acronym: 'NAMMDR', url: 'https://www.anm.ro/' },
+  'Bulgaria': { agency: 'Bulgarian Drug Agency', acronym: 'BDA', url: 'https://www.bda.bg/en/' },
+  'Croatia': { agency: 'Agency for Medicinal Products and Medical Devices', acronym: 'HALMED', url: 'https://www.halmed.hr/en/Novosti-i-edukacije/Novosti/' },
+
+  // APAC (Priority)
+  'Australia': { agency: 'Therapeutic Goods Administration', acronym: 'TGA', url: 'https://www.tga.gov.au/news' },
+  'New Zealand': { agency: 'Medsafe', acronym: 'Medsafe', url: 'https://www.medsafe.govt.nz/safety/safety.asp' },
+  'Singapore': { agency: 'Health Sciences Authority', acronym: 'HSA', url: 'https://www.hsa.gov.sg/announcements/news' },
+  'Thailand': { agency: 'Thai Food and Drug Administration', acronym: 'Thai FDA', url: 'https://www.fda.moph.go.th/' },
+  'Taiwan': { agency: 'Taiwan Food and Drug Administration', acronym: 'TFDA', url: 'https://www.fda.gov.tw/ENG/list.aspx?code=5001' },
+  'China': { agency: 'National Medical Products Administration', acronym: 'NMPA', url: 'https://english.nmpa.gov.cn/news.html' },
+  'Japan': { agency: 'Pharmaceuticals and Medical Devices Agency', acronym: 'PMDA', url: 'https://www.pmda.go.jp/english/index.html' },
+  'South Korea': { agency: 'Ministry of Food and Drug Safety', acronym: 'MFDS', url: 'https://www.mfds.go.kr/eng/brd/m_11/list.do' },
+  'Philippines': { agency: 'Food and Drug Administration Philippines', acronym: 'FDA', url: 'https://www.fda.gov.ph/press-releases/' },
+  'India': { agency: 'Central Drugs Standard Control Organisation', acronym: 'CDSCO', url: 'https://cdsco.gov.in/opencms/opencms/en/Notifications/Public-Notices/' },
+  'Malaysia': { agency: 'National Pharmaceutical Regulatory Agency', acronym: 'NPRA', url: 'https://npra.gov.my/index.php/en/consumers/safety-information' },
+  'Indonesia': { agency: 'Badan POM', acronym: 'BPOM', url: 'https://www.pom.go.id/berita' },
+  'Vietnam': { agency: 'Dav Vietnam', acronym: 'DAV', url: 'https://dav.gov.vn/' },
+
+  // Latin America
+  'Brazil': { agency: 'Agência Nacional de Vigilância Sanitária', acronym: 'ANVISA', url: 'https://www.gov.br/anvisa/pt-br' },
+  'Argentina': { agency: 'ANMAT', acronym: 'ANMAT', url: 'https://www.argentina.gob.ar/anmat' },
+  'Chile': { agency: 'Instituto de Salud Pública', acronym: 'ISP', url: 'https://www.ispch.cl/noticias/' },
+  'Colombia': { agency: 'INVIMA', acronym: 'INVIMA', url: 'https://www.invima.gov.co/noticias' },
+  'Peru': { agency: 'DIGEMID', acronym: 'DIGEMID', url: 'http://www.digemid.minsa.gob.pe/' },
+  'Venezuela': { agency: 'Instituto Nacional de Higiene Rafael Rangel', acronym: 'INHRR', url: 'http://www.inhrr.gob.ve/' },
+  
+  // ROW / G20
+  'South Africa': { agency: 'South African Health Products Regulatory Authority', acronym: 'SAHPRA', url: 'https://www.sahpra.org.za/news-and-updates/' },
+  'Saudi Arabia': { agency: 'Saudi Food and Drug Authority', acronym: 'SFDA', url: 'https://sfda.gov.sa/en/news-list' },
+  'Turkey': { agency: 'Turkish Medicines and Medical Devices Agency', acronym: 'TMMDA', url: 'https://www.titck.gov.tr/duyuru' },
+  'Russia': { agency: 'Roszdravnadzor', acronym: 'Roszdravnadzor', url: 'https://roszdravnadzor.gov.ru/en' },
+  'Israel': { agency: 'Ministry of Health', acronym: 'MOH', url: 'https://www.gov.il/en/departments/ministry_of_health/govil-landing-page' },
+  'Egypt': { agency: 'Egyptian Drug Authority', acronym: 'EDA', url: 'https://www.edaegypt.gov.eg/en/' },
+  'UAE': { agency: 'Ministry of Health and Prevention', acronym: 'MOHAP', url: 'https://mohap.gov.ae/en/media-center/news' },
+  'Nigeria': { agency: 'NAFDAC', acronym: 'NAFDAC', url: 'https://nafdac.gov.ng/news/' },
+  'Kenya': { agency: 'Pharmacy and Poisons Board', acronym: 'PPB', url: 'https://web.pharmacyboardkenya.org/' }
 };
 
 export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   {
     id: '15',
+    trackingId: 'REG-2024-015',
     title: 'MHRA AI Airlock: Regulatory Sandbox for AI Medical Devices',
     agency: 'MHRA',
     region: Region.UK,
@@ -66,6 +98,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '14',
+    trackingId: 'REG-2024-014',
     title: 'Implementation of Medical Device Good Manufacturing Practice (GMP) Standards',
     agency: 'NMPA',
     region: Region.APAC,
@@ -81,6 +114,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '13',
+    trackingId: 'REG-2024-013',
     title: 'General Principles of Software Validation (Final Guidance)',
     agency: 'TGA',
     region: Region.APAC,
@@ -96,6 +130,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '12',
+    trackingId: 'REG-2024-012',
     title: 'European Health Data Space (EHDS) Regulation Adoption',
     agency: 'EU Commission',
     region: Region.EU,
@@ -111,6 +146,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '11',
+    trackingId: 'REG-2024-011',
     title: 'Drugs and Cosmetics (Amendment) Rules, 2024',
     agency: 'CDSCO',
     region: Region.APAC,
@@ -126,6 +162,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '10',
+    trackingId: 'REG-2024-010',
     title: 'Quality Management System Regulation (QMSR) Final Rule',
     agency: 'FDA',
     region: Region.US,
@@ -141,6 +178,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '9',
+    trackingId: 'REG-2024-009',
     title: 'Artificial Intelligence (AI) Act',
     agency: 'EU Commission',
     region: Region.EU,
@@ -156,6 +194,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '8',
+    trackingId: 'REG-2024-008',
     title: 'Sakigake Designation System for Medical Devices',
     agency: 'PMDA',
     region: Region.APAC,
@@ -171,6 +210,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '7',
+    trackingId: 'REG-2024-007',
     title: 'Module VI – Management and reporting of adverse reactions',
     agency: 'EMA',
     region: Region.EU,
@@ -186,6 +226,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '6',
+    trackingId: 'REG-2024-006',
     title: 'Guidance for Industry: Data Integrity and Compliance with Drug CGMP',
     agency: 'FDA',
     region: Region.US,
@@ -201,6 +242,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '5',
+    trackingId: 'REG-2023-005',
     title: 'Cybersecurity in Medical Devices: Quality System Considerations',
     agency: 'FDA',
     region: Region.US,
@@ -216,6 +258,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '4',
+    trackingId: 'REG-2023-004',
     title: 'Annex 1: Manufacture of Sterile Medicinal Products',
     agency: 'EMA',
     region: Region.EU,
@@ -231,6 +274,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '3',
+    trackingId: 'REG-2023-003',
     title: 'ICH E6(R3) Good Clinical Practice (GCP)',
     agency: 'ICH',
     region: Region.Global,
@@ -246,6 +290,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '2',
+    trackingId: 'REG-2023-002',
     title: 'Agile Licensing for Drugs and Devices',
     agency: 'Health Canada',
     region: Region.US,
@@ -261,6 +306,7 @@ export const INITIAL_REGULATIONS: RegulationEntry[] = ([
   },
   {
     id: '1',
+    trackingId: 'REG-2024-001',
     title: 'International Recognition Framework (IRF)',
     agency: 'MHRA',
     region: Region.UK,

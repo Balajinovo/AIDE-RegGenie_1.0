@@ -1,24 +1,61 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage } from '../types';
+import { ChatMessage, GenieFeedback } from '../types';
 import { streamChatResponse, streamOpenAIResponse } from '../services/geminiService';
 
+// --- Grounding Sources Component ---
+const GroundingSources = ({ metadata }: { metadata: any }) => {
+  if (!metadata?.groundingChunks || metadata.groundingChunks.length === 0) return null;
+  
+  return (
+    <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3">
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+        <svg className="w-3 h-3 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.826a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+        Verified Intelligence Sources
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {metadata.groundingChunks.map((chunk: any, idx: number) => {
+          if (chunk.web) {
+            return (
+               <a key={idx} href={chunk.web.uri} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[10px] bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-100 px-3 py-2 rounded-xl transition-all font-bold max-w-xs truncate shadow-sm group">
+                 <span className="truncate">{chunk.web.title}</span>
+                 <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+               </a>
+            );
+          }
+          return null;
+        })}
+      </div>
+    </div>
+  );
+}
+
 // --- Feedback Form Component ---
-const FeedbackForm = ({ onClose }: { onClose: () => void }) => {
+const FeedbackForm = ({ onClose, lastUserMsg, lastModelMsg }: { onClose: () => void, lastUserMsg?: string, lastModelMsg?: string }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = () => {
-    // Process feedback (simulated backend call)
-    console.log("Feedback Submitted:", { 
-        rating, 
-        comment, 
-        timestamp: new Date().toISOString(),
-        agent: 'AIDE-RegGenie'
-    });
-    
+    const feedback: GenieFeedback = {
+      id: Date.now().toString(),
+      rating,
+      comment,
+      timestamp: Date.now(),
+      querySnippet: lastUserMsg?.substring(0, 200) || 'Unknown',
+      responseSnippet: lastModelMsg?.substring(0, 200) || 'Unknown',
+      topic: lastUserMsg?.toLowerCase().includes('gmp') ? 'GMP' : lastUserMsg?.toLowerCase().includes('gcp') ? 'GCP' : 'PV'
+    };
+
+    try {
+      const stored = localStorage.getItem('aide_genie_feedback');
+      const existing = stored ? JSON.parse(stored) : [];
+      localStorage.setItem('aide_genie_feedback', JSON.stringify([...existing, feedback]));
+    } catch (e) {
+      console.error("Failed to save feedback", e);
+    }
+
     setIsSubmitted(true);
     setTimeout(onClose, 2500);
   };
@@ -29,8 +66,8 @@ const FeedbackForm = ({ onClose }: { onClose: () => void }) => {
             <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Thank You!</h3>
-            <p className="text-sm text-slate-500">Your feedback helps improve our regulatory AI models.</p>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Feedback Recorded</h3>
+            <p className="text-sm text-slate-500">Your input helps GxP Genie learn and improve regulatory precision.</p>
         </div>
     );
   }
@@ -38,57 +75,43 @@ const FeedbackForm = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300 border border-slate-100">
         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-                Rate AI Performance
+            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                Rate Intelligence Accuracy
             </h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors">
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         <div className="p-6 space-y-6">
             <div className="flex flex-col items-center gap-3">
-                <span className="text-sm font-medium text-slate-600">How accurate was the regulatory advice?</span>
-                <div className="flex gap-1.5">
+                <span className="text-xs font-bold text-slate-500 uppercase">How helpful was this response?</span>
+                <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                         <button
                             key={star}
-                            type="button"
                             className="focus:outline-none transition-all duration-200 hover:scale-110 active:scale-95"
                             onMouseEnter={() => setHoverRating(star)}
                             onMouseLeave={() => setHoverRating(0)}
                             onClick={() => setRating(star)}
                         >
                             <svg 
-                                className={`w-9 h-9 ${star <= (hoverRating || rating) ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-slate-200'}`} 
+                                className={`w-10 h-10 ${star <= (hoverRating || rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} 
                                 viewBox="0 0 24 24" 
                                 stroke="currentColor" 
                                 strokeWidth={star <= (hoverRating || rating) ? "0" : "1.5"}
-                                strokeLinecap="round" 
-                                strokeLinejoin="round"
                             >
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                         </button>
                     ))}
                 </div>
-                <span className="text-xs font-bold text-cyan-600 h-4 uppercase tracking-wider">
-                    {hoverRating === 1 && "Inaccurate"}
-                    {hoverRating === 2 && "Needs Improvement"}
-                    {hoverRating === 3 && "Satisfactory"}
-                    {hoverRating === 4 && "Very Good"}
-                    {hoverRating === 5 && "Exceptional"}
-                    {!hoverRating && rating > 0 && (
-                        rating === 1 ? "Inaccurate" : rating === 2 ? "Needs Improvement" : rating === 3 ? "Satisfactory" : rating === 4 ? "Very Good" : "Exceptional"
-                    )}
-                </span>
             </div>
             
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Additional Comments</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Context for system learning</label>
                 <textarea
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 min-h-[100px] resize-none bg-slate-50 focus:bg-white transition-colors"
-                    placeholder="Share details about specific regulatory queries or general feedback..."
+                    className="w-full border border-slate-200 rounded-xl p-4 text-sm focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 min-h-[120px] resize-none bg-slate-50 transition-all shadow-inner"
+                    placeholder="E.g. specific citation errors, missing guidelines, or tone feedback..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                 ></textarea>
@@ -97,10 +120,9 @@ const FeedbackForm = ({ onClose }: { onClose: () => void }) => {
             <button
                 onClick={handleSubmit}
                 disabled={rating === 0}
-                className="w-full bg-gradient-to-r from-slate-800 to-slate-900 text-white font-bold py-3.5 rounded-xl hover:from-slate-900 hover:to-black disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200 hover:shadow-slate-300 flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                className="w-full bg-slate-900 text-white font-black py-4 rounded-xl hover:bg-black disabled:opacity-30 transition-all shadow-lg text-xs uppercase tracking-widest"
             >
-                <span>Submit Feedback</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                Submit Performance Data
             </button>
         </div>
     </div>
@@ -113,16 +135,15 @@ interface ChatAssistantProps {
 
 const ChatAssistant: React.FC<ChatAssistantProps> = ({ openaiKey: propOpenaiKey }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'init', role: 'model', text: 'Hello! I am your Regulatory Intelligence Assistant. I can help you navigate GMP, GCP, PV, and other healthcare regulations. Ask me about specific guidelines, comparison of regional requirements, or compliance strategies.', timestamp: Date.now() }
+    { id: 'init', role: 'model', text: 'Welcome to GxP Genie. I provide real-time regulatory intelligence and GxP compliance advice with cited source references. How can I assist with your GMP, GCP, or PV queries today?', timestamp: Date.now() }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
+  const [showKnowledgeBank, setShowKnowledgeBank] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<'gemini' | 'openai'>('gemini');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Prioritize user-supplied key (from settings), then fallback to environment variable
   const openaiKey = propOpenaiKey || process.env.openai_api_key;
 
   const scrollToBottom = () => {
@@ -146,40 +167,43 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ openaiKey: propOpenaiKey 
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsTyping(true);
+    setActiveProvider('gemini');
 
-    // Prepare history for API
     const history = messages.map(m => ({
       role: m.role,
       parts: [{ text: m.text }]
     }));
 
-    // Create a placeholder for the model response
     const modelMsgId = (Date.now() + 1).toString();
     setMessages(prev => [...prev, { id: modelMsgId, role: 'model', text: '', timestamp: Date.now() }]);
-
+    
     let fullText = '';
+    let accumulatedMetadata: any = null;
+
     try {
-      if (provider === 'openai' && openaiKey) {
+      await streamChatResponse(history, userMsg.text, (chunk, metadata) => {
+        fullText += chunk;
+        if (metadata) accumulatedMetadata = metadata;
+        setMessages(prev => prev.map(m => 
+          m.id === modelMsgId ? { ...m, text: fullText, groundingMetadata: accumulatedMetadata } : m
+        ));
+      });
+    } catch (geminiError: any) {
+      if (openaiKey) {
+        setActiveProvider('openai');
+        let fallbackFullText = `[PRIMARY ENGINE LOAD LIMIT REACHED - SWITCHING TO SECONDARY]\n\n`;
+        setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: fallbackFullText } : m));
+        try {
           await streamOpenAIResponse(history, userMsg.text, openaiKey, (chunk) => {
-            fullText += chunk;
-            setMessages(prev => prev.map(m => 
-              m.id === modelMsgId ? { ...m, text: fullText } : m
-            ));
+            fallbackFullText += chunk;
+            setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: fallbackFullText } : m));
           });
+        } catch (openaiError: any) {
+          setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: `System connection error. Please retry.` } : m));
+        }
       } else {
-          // Default to Gemini
-          await streamChatResponse(history, userMsg.text, (chunk) => {
-            fullText += chunk;
-            setMessages(prev => prev.map(m => 
-              m.id === modelMsgId ? { ...m, text: fullText } : m
-            ));
-          });
+        setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: `GxP Genie is currently unavailable.` } : m));
       }
-    } catch (error) {
-      console.error("Chat error", error);
-      setMessages(prev => prev.map(m => 
-        m.id === modelMsgId ? { ...m, text: `I encountered an error processing your request with ${provider === 'openai' ? 'ChatGPT' : 'AIDE-RegGenie_1.0'}. Please check your API key configuration.` } : m
-      ));
     } finally {
       setIsTyping(false);
     }
@@ -192,101 +216,166 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ openaiKey: propOpenaiKey 
     }
   };
 
+  const getLastUserMsg = () => {
+    const userMsgs = messages.filter(m => m.role === 'user');
+    return userMsgs.length > 0 ? userMsgs[userMsgs.length - 1].text : undefined;
+  };
+
+  const getLastModelMsg = () => {
+    const modelMsgs = messages.filter(m => m.role === 'model');
+    return modelMsgs.length > 0 ? modelMsgs[modelMsgs.length - 1].text : undefined;
+  };
+
+  const KNOWLEDGE_SOURCES = [
+      { name: 'FDA Newsroom', url: 'https://www.fda.gov/news-events', icon: '🇺🇸' },
+      { name: 'EMA Announcements', url: 'https://www.ema.europa.eu/en/news', icon: '🇪🇺' },
+      { name: 'MHRA Regulatory Updates', url: 'https://www.gov.uk/mhra/news', icon: '🇬🇧' },
+      { name: 'ICH Official Library', url: 'https://www.ich.org/library', icon: '🌐' },
+      { name: 'GxP Ingested Bank', url: '/#/database', icon: '📁' }
+  ];
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
-      {/* Chat Header / Toolbar */}
-      <div className="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center z-10">
-          <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_5px] ${provider === 'gemini' ? 'bg-cyan-500 shadow-cyan-400' : 'bg-green-500 shadow-green-400'}`}></div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Session</span>
-              </div>
-              
-              {/* Model Selector (Only if OpenAI Key is present) */}
-              {openaiKey && (
-                  <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
-                      <button 
-                        onClick={() => setProvider('gemini')}
-                        className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${provider === 'gemini' ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z" fill="currentColor" className="text-cyan-600 opacity-20"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" fill="currentColor"/></svg>
-                         AIDE-RegGenie_1.0
-                      </button>
-                      <button 
-                        onClick={() => setProvider('openai')}
-                        className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${provider === 'openai' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0843 7.6148-4.2632a.67.67 0 0 0 .3924-.4765.7008.7008 0 0 0-.055-.552l-3.155-6.9065-3.324 5.7937a.64.64 0 0 1-.5533.3227h-6.612a4.494 4.494 0 0 1 .558-5.2441 4.4545 4.4545 0 0 1 4.8645-.858l-.1258.071L5.184 7.25a.667.667 0 0 0-.2512.8694l2.5108 5.506 4.008-2.244a.6413.6413 0 0 1 .6335.0036l6.0273 3.3753a4.4972 4.4972 0 0 1-4.8525 7.67z"/></svg>
-                         GPT-4o
-                      </button>
+    <div className="flex flex-col flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative min-h-0">
+      {/* Integrated Knowledge Hub Header */}
+      <div className="bg-slate-900 text-white p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
+                      <svg className="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                   </div>
-              )}
+                  <div>
+                      <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                          Knowledge Intelligence Hub
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-black bg-cyan-500 text-slate-900 px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm">Sync Active</span>
+                          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Authorized Internal & External Banks</p>
+                      </div>
+                  </div>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                  <button 
+                      onClick={() => (window as any).setActiveTab?.('gap-analysis')}
+                      className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2 rounded-xl font-black text-xs transition-all shadow-lg active:scale-95 border-b-4 border-slate-300 hover:bg-slate-50"
+                  >
+                      <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg>
+                      Ingest SOPs
+                  </button>
+                  <a 
+                      href="https://sharepoint.com/sites/clinical-knowledge-base" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-black text-xs border border-white/10 transition-all shadow-lg active:scale-95"
+                  >
+                      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M1.3 0H24v24H0V1.3L1.3 0zm10.5 20.3V3.7l-7.9 4.3v8l7.9 4.3zm9 0V3.7l-7.9 4.3v8l7.9 4.3z"/></svg>
+                      SharePoint
+                  </a>
+                  <button 
+                      onClick={() => setShowKnowledgeBank(!showKnowledgeBank)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs transition-all shadow-lg active:scale-95 border border-white/20 ${showKnowledgeBank ? 'bg-cyan-500 text-slate-900' : 'bg-slate-800 text-white'}`}
+                  >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.826a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                      Bank Sources
+                  </button>
+              </div>
           </div>
 
+          {/* Expanded Bank Sources Overlay */}
+          {showKnowledgeBank && (
+              <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10 animate-in slide-in-from-top duration-300">
+                  <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-3">Live Linked Registries</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      {KNOWLEDGE_SOURCES.map((source, i) => (
+                          <a key={i} href={source.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 bg-black/20 hover:bg-black/40 rounded-xl transition-all border border-white/5 group">
+                              <span className="text-lg">{source.icon}</span>
+                              <span className="text-[10px] font-bold text-slate-300 group-hover:text-white truncate">{source.name}</span>
+                          </a>
+                      ))}
+                  </div>
+              </div>
+          )}
+      </div>
+
+      <div className="px-5 py-3 border-b border-slate-100 bg-white flex justify-between items-center z-10 shadow-sm">
+          <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full animate-pulse shadow-[0_0_8px] ${activeProvider === 'gemini' ? 'bg-cyan-500 shadow-cyan-400' : 'bg-green-500 shadow-green-400'}`}></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Genie Intelligence Active</span>
+              </div>
+          </div>
           <button 
-             onClick={() => setIsFeedbackOpen(true)}
-             className="text-xs font-bold text-cyan-600 hover:text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 group"
+            onClick={() => setIsFeedbackOpen(true)} 
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-100 transition-all active:scale-95 shadow-sm uppercase tracking-tighter"
           >
-             <svg className="w-3.5 h-3.5 text-cyan-500 group-hover:text-cyan-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-             Rate Response
+              <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+              Rate Precision
           </button>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
-              msg.role === 'user' 
-                ? 'bg-gradient-to-br from-cyan-600 to-teal-600 text-white rounded-tr-none' 
-                : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-            }`}>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {msg.text}
-              </p>
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/20">
+        {messages.map((message, index) => (
+          <div key={message.id} className={`flex items-start gap-4 ${message.role === 'user' ? 'justify-end' : ''} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+            {message.role === 'model' && (
+              <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-slate-900 flex items-center justify-center text-white border border-slate-700">
+                <svg className="w-6 h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" /></svg>
+              </div>
+            )}
+            <div className={`max-w-2xl p-6 rounded-3xl shadow-sm ${
+                message.role === 'user'
+                  ? 'bg-slate-800 text-white rounded-br-none'
+                  : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
+              }`}
+            >
+              <div className="whitespace-pre-wrap text-[13px] leading-[1.8] font-medium tracking-tight">
+                {message.text}
+                {isTyping && index === messages.length - 1 && (
+                  <span className="ml-1 inline-flex w-1.5 h-4 bg-cyan-500 animate-pulse"></span>
+                )}
+              </div>
+              {message.groundingMetadata && <GroundingSources metadata={message.groundingMetadata} />}
             </div>
+            {message.role === 'user' && (
+              <div className="w-10 h-10 rounded-2xl bg-white border-2 border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center">
+                 <span className="text-slate-600 font-black text-[10px]">YOU</span>
+              </div>
+            )}
           </div>
         ))}
-        {isTyping && (
-          <div className="flex justify-start">
-             <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 shadow-sm flex items-center gap-2">
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-             </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-slate-200">
-        <div className="relative">
+      <div className="p-5 border-t border-slate-100 bg-white z-10 shadow-sm">
+        <div className="relative max-w-4xl mx-auto">
           <textarea
-            className="w-full border border-slate-300 rounded-xl pl-4 pr-12 py-3 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:outline-none resize-none text-sm shadow-sm"
-            placeholder={`Ask ${provider === 'gemini' ? 'AIDE-RegGenie_1.0' : 'GPT-4o'} about regulations...`}
-            rows={2}
+            className="w-full pl-6 pr-14 py-4 border border-slate-200 rounded-3xl resize-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 transition-all bg-slate-50 text-[13px] shadow-inner font-bold"
+            placeholder="Query GxP Knowledge Bank or Ingested SOPs..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-          ></textarea>
+            rows={2}
+            disabled={isTyping}
+          />
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isTyping}
-            className={`absolute right-2 bottom-2.5 p-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm ${provider === 'gemini' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-green-600 hover:bg-green-700'}`}
+            disabled={isTyping || !inputValue.trim()}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-slate-900 text-white w-11 h-11 rounded-full flex items-center justify-center hover:bg-black disabled:opacity-30 transition-all shadow-lg active:scale-95 border-b-2 border-cyan-500"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
           </button>
         </div>
-        <p className="text-center text-[10px] text-slate-400 mt-2 font-medium">
-          AI-generated content. Verify with official source documentation.
+        <p className="text-center text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest">
+            Specialized in GxP, Clinical Operations & PV Compliance Intelligence
         </p>
       </div>
 
-      {/* Feedback Modal Overlay */}
       {isFeedbackOpen && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-[2px] p-4 transition-all">
-              <FeedbackForm onClose={() => setIsFeedbackOpen(false)} />
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+              <FeedbackForm 
+                onClose={() => setIsFeedbackOpen(false)} 
+                lastUserMsg={getLastUserMsg()}
+                lastModelMsg={getLastModelMsg()}
+              />
           </div>
       )}
     </div>
